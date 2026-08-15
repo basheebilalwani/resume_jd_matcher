@@ -1,0 +1,4 @@
+[server]
+# Enforce the 10 MB resume upload limit (matches MAX_UPLOAD_MB in app.py).
+# Streamlit's default is 200 MB; this overrides it for the whole app.
+maxUploadSize = 10

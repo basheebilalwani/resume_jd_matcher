@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# NLTK downloaded data
+nltk_data/
+.venv/nltk_data/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment
+.env
+.env.*
+
+# Kiro / IDE metadata
+.kiro/
