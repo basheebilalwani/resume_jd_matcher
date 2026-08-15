@@ -11,8 +11,9 @@ Pipeline applied by preprocess_text():
   5. Lemmatise each token with WordNetLemmatizer
   6. Join tokens with a single space and strip whitespace
 
-Run `python scripts/download_nltk_data.py` once before first use to
-ensure the required NLTK corpora are available locally.
+Required NLTK resources are downloaded automatically on first use if they
+are not already present, so the application works in fresh environments
+such as Streamlit Community Cloud without any manual setup step.
 """
 import string
 
@@ -24,40 +25,52 @@ from nltk.tokenize import word_tokenize
 
 def _check_nltk_resource(resource_path: str, download_name: str) -> None:
     """
-    Verify that an NLTK resource is available locally.
+    Ensure an NLTK resource is available locally, downloading it if needed.
+
+    First checks whether the resource already exists via ``nltk.data.find()``.
+    If it is missing, downloads it silently using ``nltk.download()``.  If the
+    download also fails (e.g. no internet connection), raises ``LookupError``
+    with an actionable message so the caller can surface a clear error.
 
     Args:
-        resource_path: The NLTK resource path used with nltk.data.find()
-                       (e.g. 'tokenizers/punkt_tab').
-        download_name: The name passed to nltk.download() if missing
-                       (e.g. 'punkt_tab').
+        resource_path: The NLTK resource path passed to ``nltk.data.find()``
+                       (e.g. ``'tokenizers/punkt_tab'``).
+        download_name: The package name passed to ``nltk.download()``
+                       (e.g. ``'punkt_tab'``).
 
     Raises:
-        LookupError: If the resource is not present, with a message that
-                     names the missing resource and the download command.
+        LookupError: If the resource is not present and cannot be downloaded,
+                     with a message naming the missing resource.
     """
     try:
         nltk.data.find(resource_path)
     except LookupError:
-        raise LookupError(
-            f"Required NLTK resource '{download_name}' is not available locally. "
-            f"Download it by running: python scripts/download_nltk_data.py  "
-            f"(or: import nltk; nltk.download('{download_name}'))"
-        )
+        # Resource is absent — attempt a silent automatic download.
+        success = nltk.download(download_name, quiet=True)
+        if not success:
+            raise LookupError(
+                f"Required NLTK resource '{download_name}' is not available "
+                f"and could not be downloaded automatically. "
+                f"Download it manually by running: "
+                f"python scripts/download_nltk_data.py  "
+                f"(or: import nltk; nltk.download('{download_name}'))"
+            )
 
 
 def _verify_nltk_resources() -> None:
     """
-    Check that all NLTK resources required by preprocess_text() are present.
+    Ensure all NLTK resources required by preprocess_text() are available.
 
-    Raises:
-        LookupError: If any required resource is missing, naming the first
-                     missing resource and the command to fix it.
+    Each resource is checked via ``_check_nltk_resource``, which downloads
+    it automatically if it is missing.  Raises ``LookupError`` (with an
+    actionable message) only if a resource cannot be downloaded.
     """
     required = [
-        ("tokenizers/punkt_tab", "punkt_tab"),
-        ("corpora/stopwords", "stopwords"),
-        ("corpora/wordnet", "wordnet"),
+        ("tokenizers/punkt",                     "punkt"),
+        ("tokenizers/punkt_tab",                 "punkt_tab"),
+        ("corpora/stopwords",                    "stopwords"),
+        ("corpora/wordnet",                      "wordnet"),
+        ("taggers/averaged_perceptron_tagger",   "averaged_perceptron_tagger"),
     ]
     for resource_path, download_name in required:
         _check_nltk_resource(resource_path, download_name)
@@ -117,6 +130,9 @@ def preprocess_text(text: str) -> str:
       5. Lemmatise each token using NLTK's WordNetLemmatizer.
       6. Join the resulting tokens with exactly one space.
 
+    Required NLTK resources are downloaded automatically on first use if
+    they are not already present locally.
+
     Args:
         text: Raw input string (resume text or job description text).
 
@@ -126,9 +142,8 @@ def preprocess_text(text: str) -> str:
         only punctuation, or all tokens are filtered out as stop words.
 
     Raises:
-        LookupError: If a required NLTK resource (punkt_tab, stopwords,
-                     wordnet) is not available locally. The error message
-                     names the missing resource and the download command.
+        LookupError: If a required NLTK resource is missing and cannot be
+                     downloaded (e.g. no internet connection).
 
     Examples:
         >>> preprocess_text("Running tests for Python developers!")
